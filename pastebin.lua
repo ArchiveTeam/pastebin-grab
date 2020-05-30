@@ -57,7 +57,7 @@ allowed = function(url, parenturl)
   end
 
   for s in string.gmatch(url, "([0-9a-zA-Z]+)") do
-    if string.lower(s) == item_value then
+    if string.lower(s) == string.lower(item_value) then
       return true
     end
   end
@@ -132,6 +132,11 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
 
   if allowed(url, nil) and status_code == 200 then
     html = read_file(file)
+    if string.match(url, "^https?://pastebin%.com/[0-9a-zA-Z]+$")
+      and not string.match(html, 'class="paste_code"') then
+      print("This paste is not available, probably has a captcha.")
+      abortgrab = true
+    end
     for newurl in string.gmatch(string.gsub(html, "&quot;", '"'), '([^"]+)') do
       checknewurl(newurl)
     end
