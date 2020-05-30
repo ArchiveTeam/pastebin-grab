@@ -55,6 +55,8 @@ Distribution-specific setup
 -------------------------
 ### For Debian/Ubuntu:
 
+Package `libzstd-dev` version 1.4.4 is required which is currently available from `buster-backports`.
+
     adduser --system --group --shell /bin/bash archiveteam
     apt-get update \
     && apt-get install -y git-core libgnutls-dev lua5.1 liblua5.1-0 liblua5.1-0-dev screen python-dev python-pip bzip2 zlib1g-dev flex autoconf autopoint texinfo gperf lua-socket rsync \
