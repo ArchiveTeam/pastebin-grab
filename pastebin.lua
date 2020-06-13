@@ -134,8 +134,12 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     html = read_file(file)
     if string.match(url, "^https?://pastebin%.com/[0-9a-zA-Z]+$")
       and not string.match(html, 'class="paste_code"') then
-      print("This paste is not available, probably has a captcha.")
-      abortgrab = true
+      if string.match(html, "<title>%s*Private Paste ID") then
+        print("Private paste.")
+      else
+        print("This paste is not available, probably has a captcha.")
+        abortgrab = true
+      end
     end
     for newurl in string.gmatch(string.gsub(html, "&quot;", '"'), '([^"]+)') do
       checknewurl(newurl)
@@ -209,6 +213,7 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
       io.stdout:flush()
       tries = 0
       if allowed(url["url"], nil) then
+        io.open("BANNED", "w"):close()
         return wget.actions.ABORT
       else
         return wget.actions.EXIT
