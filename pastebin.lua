@@ -130,10 +130,16 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     end
   end
 
-  if allowed(url, nil) and status_code == 200 then
+  if allowed(url, nil) and status_code == 200
+    and not string.match(url, "^https?://[^/]+/dl/")
+    and not string.match(url, "^https?://[^/]+/raw/")
+    and not string.match(url, "^https?://[^/]+/clone/")
+    and not string.match(url, "^https?://[^/]+/print/")
+    and not string.match(url, "^https?://[^/]+/embed_js/")
+    and not string.match(url, "^https?://[^/]+/embed_iframe/") then
     html = read_file(file)
     if string.match(url, "^https?://pastebin%.com/[0-9a-zA-Z]+$")
-      and not string.match(html, 'class="paste_code"') then
+      and not string.match(html, 'class="textarea"') then
       if string.match(html, "<title>%s*Private Paste ID") then
         print("Private paste.")
       else
@@ -141,6 +147,8 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         abortgrab = true
       end
     end
+    html = string.gsub(html, '<textarea%s+class="textarea">.-</textarea>', '')
+    html = string.gsub(html, '<div[^>]+class="source"[^>]+>.-</div>%s*</div>', '')
     for newurl in string.gmatch(string.gsub(html, "&quot;", '"'), '([^"]+)') do
       checknewurl(newurl)
     end
