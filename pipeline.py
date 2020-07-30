@@ -16,7 +16,6 @@ import subprocess
 import sys
 import time
 import string
-import base64
 
 import seesaw
 from seesaw.externalprocess import WgetDownload
@@ -55,7 +54,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20200730.02'
+VERSION = '20200730.03'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'pastebin'
 TRACKER_HOST = 'trackerproxy.meo.ws'
@@ -189,6 +188,14 @@ class ZstdDict(object):
 
 
 class WgetArgs(object):
+    post_chars = string.digits + string.ascii_letters
+
+    def int_to_str(self, i):
+        d, m = divmod(i, 62)
+        if d > 0:
+            return self.int_to_str(d) + self.post_chars[m]
+        return self.post_chars[m]
+
     def realize(self, item):
         wget_args = [
             WGET_AT,
@@ -232,9 +239,7 @@ class WgetArgs(object):
         item_name = item['item_name']
         item_value = item_name
         if len(item_value) > 8:
-            item_value = base64.b32decode(item_name)
-            if type(item_value) is not str:
-                item_value = str(item_value, 'utf8')
+            item_value = self.int_to_str(int(item_name, 36))
 
         item['item_value'] = item_value
 
