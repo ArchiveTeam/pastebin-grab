@@ -239,7 +239,7 @@ class WgetArgs(object):
         item_name = item['item_name']
         item_value = item_name
         if len(item_value) > 8:
-            item_value = self.int_to_str(int(item_name, 36))
+            item_value = self.int_to_str(int(item_name.replace('b36.', ''), 36))
 
         item['item_value'] = item_value
 
