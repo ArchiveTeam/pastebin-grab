@@ -3,6 +3,7 @@ dofile("urlcode.lua")
 JSON = (loadfile "JSON.lua")()
 
 local item_value = os.getenv('item_value')
+local item_type = os.getenv('item_type')
 local item_dir = os.getenv('item_dir')
 local warc_file_base = os.getenv('warc_file_base')
 
@@ -142,13 +143,23 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       and not string.match(html, 'class="textarea"') then
       if string.match(html, "<title>%s*Private Paste ID") then
         print("Private paste.")
+      elseif string.match(html, "<title>[^<]+Potentially offensive content") then
+        print("Paste with offensive content.")
+        local csrf = string.match(html, '<input[^>]+name="_csrf%-frontend"[^>]+value="([^"]+)">')
+        table.insert(urls, {
+          url=url,
+          post_data="_csrf-frontend=" .. csrf .. "&is_spam=0"
+        })
+        os.execute("sleep 60")
       else
         print("This paste is not available, probably has a captcha.")
         abortgrab = true
       end
     end
-    html = string.gsub(html, '<textarea%s+class="textarea">.-</textarea>', '')
-    html = string.gsub(html, '<div[^>]+class="source"[^>]+>.-</div>%s*</div>', '')
+    if item_type == "paste" then
+      html = string.gsub(html, '<textarea%s+class="textarea">.-</textarea>', '')
+      html = string.gsub(html, '<div[^>]+class="source"[^>]+>.-</div>%s*</div>', '')
+    end
     for newurl in string.gmatch(string.gsub(html, "&quot;", '"'), '([^"]+)') do
       checknewurl(newurl)
     end

@@ -41,11 +41,7 @@ if StrictVersion(seesaw.__version__) < StrictVersion('0.8.5'):
 
 WGET_AT = find_executable(
     'Wget+AT',
-    [
-        'GNU Wget 1.20.3-at.20200401.01',
-        'GNU Wget 1.20.3-at.20200804.01',
-        'GNU Wget 1.20.3-at.20200902.01'
-    ],
+    ['GNU Wget 1.20.3-at.20201030.01'],
     ['./wget-at']
 )
 
@@ -58,7 +54,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20200902.01'
+VERSION = '20201110.01'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'pastebin'
 TRACKER_HOST = 'trackerproxy.meo.ws'
@@ -205,7 +201,6 @@ class WgetArgs(object):
             WGET_AT,
             '-U', USER_AGENT,
             '-nv',
-            '--no-cookies',
             '--content-on-error',
             '--lua-script', 'pastebin.lua',
             '-o', ItemInterpolation('%(item_dir)s/wget.log'),
@@ -224,8 +219,8 @@ class WgetArgs(object):
             '--waitretry', '30',
             '--warc-file', ItemInterpolation('%(item_dir)s/%(warc_file_base)s'),
             '--warc-header', 'operator: Archive Team',
-            '--warc-header', 'pastebin-dld-script-version: ' + VERSION,
-            '--warc-header', ItemInterpolation('pastebin-item: %(item_name)s'),
+            '--warc-header', 'x-wget-at-project-version: ' + VERSION,
+            '--warc-header', 'x-wget-at-project-name: ' + TRACKER_ID,
             '--warc-dedup-url-agnostic',
             '--warc-compression-use-zstd',
             '--warc-zstd-dict-no-include'
@@ -241,14 +236,32 @@ class WgetArgs(object):
         ])
 
         item_name = item['item_name']
-        item_value = item_name
-        if len(item_value) > 8:
+        if ':' in item_name:
+            item_type, item_value = item_name.split(':')
+        elif item_name.startswith('b36.'):
+            item_type = 'paste'
             item_value = self.int_to_str(int(item_name.replace('b36.', ''), 36))
+        elif len(item_name) == 8:
+            item_type = 'paste'
+            item_value = item_name
+        else:
+            raise ValueError('Could not identify item.')
 
         item['item_value'] = item_value
+        item['item_type'] = item_type
 
-        wget_args.extend(['--warc-header', 'pastebin-paste: ' + str(item_value)])
-        wget_args.append('https://pastebin.com/{}'.format(item_value))
+        wget_args.extend([
+            '--warc-item-name', item_name,
+            '--warc-header', 'x-wget-at-project-item-name: '+item_name
+        ])
+
+        if item_type == 'paste':
+            wget_args.append('https://pastebin.com/{}'.format(item_value))
+        #elif item_type == 'user':
+        #    wget_args.extend(['--warc-header', 'pastebin-user: ' + str(item_value)])
+        #    wget_args.append('https://pastebin.com/u/{}'.format(item_value))
+        else:
+            raise ValueError('Unsupported item type.')
 
         if 'bind_address' in globals():
             wget_args.extend(['--bind-address', globals()['bind_address']])
@@ -284,7 +297,8 @@ pipeline = Pipeline(
         env={
             'item_dir': ItemValue('item_dir'),
             'item_value': ItemValue('item_value'),
-            'warc_file_base': ItemValue('warc_file_base'),
+            'item_type': ItemValue('item_type'),
+            'warc_file_base': ItemValue('warc_file_base')
         }
     ),
     PrepareStatsForTracker(
