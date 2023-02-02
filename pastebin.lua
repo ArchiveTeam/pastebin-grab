@@ -217,12 +217,16 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
     io.stdout:write("ABORTING...\n")
     return wget.actions.ABORT
   end
+
+  if status_code == 404 then
+    return wget.actions.ABORT
+  end
   
   if status_code >= 400
       or status_code  == 0 then
     io.stdout:write("Server returned "..http_stat.statcode.." ("..err.."). Sleeping.\n")
     io.stdout:flush()
-    local maxtries = 10
+    local maxtries = 5
     if not allowed(url["url"], nil) then
         maxtries = 2
     end
