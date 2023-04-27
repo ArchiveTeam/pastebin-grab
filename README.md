@@ -17,7 +17,20 @@ Running with a warrior
 
 Follow the [instructions on the ArchiveTeam wiki](http://archiveteam.org/index.php?title=Warrior) for installing the Warrior, and select the "Pastebin" project in the Warrior interface.
 
-Running without a warrior
+Running with Docker
+-------------------------
+
+The recommended way to run these projects is with Docker. The instructions below are a short overview. For more information and detailed explanations of the commands, follow the follow the [Docker instructions on the Archive Team wiki](https://wiki.archiveteam.org/index.php/Running_Archive_Team_Projects_with_Docker).
+
+It is advised to use watchtower to automatically update the project. This requires watchtower:
+
+    docker run --name watchtower --restart=unless-stopped -v /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower --label-enable --cleanup --interval 3600
+
+after which the project can be run:
+
+    docker run --name archiveteam --label=com.centurylinklabs.watchtower.enable=true --restart=unless-stopped atdr.meo.ws/archiveteam/pastebin-grab --concurrent 1 YOURNICKHERE
+
+Running without a warrior or Docker
 -------------------------
 To run this outside the warrior, clone this repository, cd into its directory and run:
 
