@@ -1,6 +1,7 @@
-dofile("table_show.lua")
-dofile("urlcode.lua")
-JSON = (loadfile "JSON.lua")()
+local http = require("socket.http")
+local cjson = require("cjson")
+local utf8 = require("utf8")
+local base64 = require("base64")
 
 local item_value = os.getenv('item_value')
 local item_type = os.getenv('item_type')
@@ -14,10 +15,7 @@ local addedtolist = {}
 local abortgrab = false
 
 local ids = {}
-
-for ignore in io.open("ignore-list", "r"):lines() do
-  downloaded[ignore] = true
-end
+local discovered_outlinks = {}
 
 load_json_file = function(file)
   if file then
@@ -133,7 +131,6 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
 
   if allowed(url, nil) and status_code == 200
     and not string.match(url, "^https?://[^/]+/dl/")
-    and not string.match(url, "^https?://[^/]+/raw/")
     and not string.match(url, "^https?://[^/]+/clone/")
     and not string.match(url, "^https?://[^/]+/print/")
     and not string.match(url, "^https?://[^/]+/embed_js/")
@@ -154,6 +151,66 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       else
         print("This paste is not available, probably has a captcha.")
         abortgrab = true
+      end
+    end
+    if string.match(url, "/raw/") then
+      local newurls = {}
+      for line in string.gmatch(html, "([^\n]+)") do
+        for _, pattern in pairs({
+          "^([hH][tT][tT][pP][sS]?://[^#]+)",
+          "([hH][tT][tT][pP][sS]?://[^%s<>#\"'\\`{}%)%]]+)",
+          "([hH][tT][tT][pP][sS]?://[A-Za-z0-9!%$%%&'%(%)%*%+,/:;=%?@%[%]%-_%.~]+)",
+          '"([hH][tT][tT][pP][sS]?://[^"]+)',
+          "'([hH][tT][tT][pP][sS]?://[^']+)",
+          ">[%s]*([hH][tT][tT][pP][sS]?://[^<%s]+)",
+        }) do
+          for newurl in string.gmatch(line, pattern) do
+            while string.match(newurl, ".[%.&,!;]$") do
+              newurl = string.match(newurl, "^(.+).$")
+            end
+            print(newurl)
+            newurls[newurl] = true
+          end
+        end
+        for c62, c63 in pairs({
+          ["+"]="/",
+          ["-"]="_"
+        }) do
+          for newurl in string.gmatch(line, "(aHR0c[0-9A-Za-z%" .. c62 .. c63 .. "]+=*)") do
+          print(newurl)
+            local status, newurl = pcall(base64.decode, newurl, base64.makedecoder(c62, c63, "="))
+            if status then
+            print("", newurl)
+              newurls[newurl] = true
+            end
+          end
+        end
+      end
+      for newurl, _ in pairs(newurls) do
+        newurl = string.gsub(
+          newurl, "\\[uU]([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])",
+          function (s)
+            return utf8.char(tonumber(s, 16))
+          end
+        )
+        newurl = string.gsub(
+          newurl, "\\[xX]([0-9a-fA-F][0-9a-fA-F])",
+          function (s)
+            return utf8.char(tonumber(s, 16))
+          end
+        )
+        newurl = string.gsub(
+          newurl, "(.)",
+          function (s)
+            local b = string.byte(s)
+            if b < 32 or b > 126 then
+              return string.format("%%%02X", b)
+            end
+            return s
+          end
+        )
+        newurl = string.match(newurl, "^([^#]*)")
+        discovered_outlinks[newurl] = true
       end
     end
     if item_type == "paste" then
@@ -256,6 +313,58 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
   end
 
   return wget.actions.NOTHING
+end
+
+wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total_downloaded_bytes, total_download_time)
+  local function submit_backfeed(items, key)
+    local tries = 0
+    local maxtries = 10
+    while tries < maxtries do
+      if killgrab then
+        return false
+      end
+      local body, code, headers, status = http.request(
+        "https://legacy-api.arpa.li/backfeed/legacy/" .. key,
+        items .. "\0"
+      )
+      if code == 200 and body ~= nil and cjson.decode(body)["status_code"] == 200 then
+        io.stdout:write(string.match(body, "^(.-)%s*$") .. "\n")
+        io.stdout:flush()
+        return nil
+      end
+      io.stdout:write("Failed to submit discovered URLs." .. tostring(code) .. tostring(body) .. "\n")
+      io.stdout:flush()
+      os.execute("sleep " .. math.floor(math.pow(2, tries)))
+      tries = tries + 1
+    end
+    kill_grab()
+    error()
+  end
+  
+  for key, data in pairs({
+    ["urls-c3ilj1tl9w8p1r6e"] = discovered_outlinks
+  }) do
+    print('queuing for', string.match(key, "^(.+)%-"))
+    local items = nil
+    local count = 0
+    for item, _ in pairs(data) do
+      --print("found item", item)
+      if items == nil then
+        items = item
+      else
+        items = items .. "\0" .. item
+      end
+      count = count + 1
+      if count == 500 then
+        submit_backfeed(items, key)
+        items = nil
+        count = 0
+      end
+    end
+    if items ~= nil then
+      submit_backfeed(items, key)
+    end
+  end
 end
 
 wget.callbacks.before_exit = function(exit_status, exit_status_string)

@@ -72,10 +72,11 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20231102.01'
+VERSION = '20240110.01'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'pastebin'
 TRACKER_HOST = 'legacy-api.arpa.li'
+MULTI_ITEM_SIZE = 1 # KEEP 1
 
 
 ###########################################################################
@@ -310,8 +311,9 @@ project = Project(
 
 pipeline = Pipeline(
     CheckIP(),
-    GetItemFromTracker('http://%s/%s' % (TRACKER_HOST, TRACKER_ID), downloader,
-        VERSION),
+    GetItemFromTracker('https://{}/{}/multi={}/'
+        .format(TRACKER_HOST, TRACKER_ID, MULTI_ITEM_SIZE),
+        downloader, VERSION),
     PrepareDirectories(warc_prefix='pastebin'),
     WgetDownload(
         WgetArgs(),
