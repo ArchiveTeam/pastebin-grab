@@ -168,7 +168,6 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
             while string.match(newurl, ".[%.&,!;]$") do
               newurl = string.match(newurl, "^(.+).$")
             end
-            print(newurl)
             newurls[newurl] = true
           end
         end
@@ -177,10 +176,8 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
           ["-"]="_"
         }) do
           for newurl in string.gmatch(line, "(aHR0c[0-9A-Za-z%" .. c62 .. c63 .. "]+=*)") do
-          print(newurl)
             local status, newurl = pcall(base64.decode, newurl, base64.makedecoder(c62, c63, "="))
             if status then
-            print("", newurl)
               newurls[newurl] = true
             end
           end
