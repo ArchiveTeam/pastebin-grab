@@ -72,7 +72,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20241119.01'
+VERSION = '20250715.01'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'pastebin'
 TRACKER_HOST = 'legacy-api.arpa.li'
@@ -247,7 +247,8 @@ class WgetArgs(object):
             '--warc-header', 'x-wget-at-project-name: ' + TRACKER_ID,
             '--warc-dedup-url-agnostic',
             '--warc-compression-use-zstd',
-            '--warc-zstd-dict-no-include'
+            '--warc-zstd-dict-no-include',
+            '--warc-tempdir', ItemInterpolation('%(item_dir)s'),
         ]
 
         dict_data = ZstdDict.get_dict()
