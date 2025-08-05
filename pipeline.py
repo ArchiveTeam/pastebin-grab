@@ -72,7 +72,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20250715.02'
+VERSION = '20250805.01'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'pastebin'
 TRACKER_HOST = 'legacy-api.arpa.li'
@@ -180,7 +180,7 @@ class ZstdDict(object):
         if cls.data is not None and time.time() - cls.created < 1800:
             return cls.data
         response = requests.get(
-            'http://tracker.archiveteam.org:25654/dictionary',
+            'https://tracker.archiveteam.org:25654/dictionary',
             params={
                 'project': TRACKER_ID
             }
@@ -306,7 +306,7 @@ project = Project(
     title = 'Pastebin',
     project_html = '''
     <img class="project-logo" alt="logo" src="https://www.archiveteam.org/images/3/35/Pastebin.com_logo.png" height="50px"/>
-    <h2>pastebin.com <span class="links"><a href="https://pastebin.com/">Website</a> &middot; <a href="http://tracker.archiveteam.org/pastebin/">Leaderboard</a></span></h2>
+    <h2>pastebin.com <span class="links"><a href="https://pastebin.com/">Website</a> &middot; <a href="https://tracker.archiveteam.org/pastebin/">Leaderboard</a></span></h2>
     '''
 )
 
@@ -341,7 +341,7 @@ pipeline = Pipeline(
         name='shared:rsync_threads', title='Rsync threads',
         description='The maximum number of concurrent uploads.'),
         UploadWithTracker(
-            'http://%s/%s' % (TRACKER_HOST, TRACKER_ID),
+            'https://%s/%s' % (TRACKER_HOST, TRACKER_ID),
             downloader=downloader,
             version=VERSION,
             files=[
@@ -358,7 +358,7 @@ pipeline = Pipeline(
         ),
     ),
     SendDoneToTracker(
-        tracker_url='http://%s/%s' % (TRACKER_HOST, TRACKER_ID),
+        tracker_url='https://%s/%s' % (TRACKER_HOST, TRACKER_ID),
         stats=ItemValue('stats')
     )
 )
