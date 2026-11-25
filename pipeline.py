@@ -72,7 +72,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20260327.01'
+VERSION = '20261125.01'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'pastebin'
 TRACKER_HOST = 'legacy-api.arpa.li'
@@ -180,7 +180,7 @@ class ZstdDict(object):
         if cls.data is not None and time.time() - cls.created < 1800:
             return cls.data
         response = requests.get(
-            'https://tracker.archiveteam.org:25654/dictionary',
+            'https://legacy-api.arpa.li/dictionary',
             params={
                 'project': TRACKER_ID
             }
